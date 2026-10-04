@@ -17,9 +17,12 @@ real output from my own environment.
 | Component | Detail |
 |---|---|
 | Host | Mac Mini M4 |
-| Hypervisor | UTM |
-| Guest OS | Ubuntu 24.04 LTS (ARM64) |
-| Kubernetes | k0s (single node) |
+| Hypervisor | UTM (QEMU, Apple Silicon) |
+| Guest OS | Ubuntu Server 26.04.1 LTS (ARM64), kernel 7.0 |
+| VM resources | 4 vCPU, ~10 GB RAM, 40 GB disk |
+| Kubernetes | k0s v1.36.4 (single node, controller + workloads) |
+| CNI | kube-router (k0s default) |
+| Datastore | kine/SQLite (k0s single-node default) |
 
 Setup notes: [docs/environment.md](docs/environment.md)
 

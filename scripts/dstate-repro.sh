@@ -10,4 +10,4 @@ command -v stress-ng >/dev/null || { echo "stress-ng not installed" >&2; exit 1;
 
 echo "Running ${WORKERS} hdd workers for ${DURATION}. In another terminal, run:"
 echo "  uptime; vmstat 1 5; iostat -x 1 5; ps -eo state,pid,cmd | awk '\$1==\"D\"'"
-stress-ng --hdd "${WORKERS}" --timeout "${DURATION}" --metrics-brief
+stress-ng --hdd "${WORKERS}" --hdd-bytes 2G --timeout "${DURATION}" --metrics-brief

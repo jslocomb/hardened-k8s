@@ -11,3 +11,5 @@ secrets/
 # OS / editor
 .DS_Store
 *.swp
+
+vm-inventory-*.txt
