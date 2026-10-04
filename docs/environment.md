@@ -3,9 +3,16 @@
 Documented from a live inventory of the VM (`scripts/vm-inventory.sh`).
 
 ## Host and hypervisor
-- Host: Mac Mini M4
-- Hypervisor: UTM (QEMU virt machine, Apple Silicon virtualization)
-- Network: UTM Shared network (NAT, DHCP on 192.168.64.0/24)
+| Item | Value |
+|---|---|
+| Host | Mac Mini M4 |
+| Hypervisor | UTM, QEMU backend |
+| Machine type | QEMU 10.0 ARM Virtual Machine (`virt-10.0`) |
+| Architecture | ARM64 (aarch64) |
+| Memory | 10 GB |
+| Network | UTM Shared Network (NAT), `virtio-net-pci`, DHCP on 192.168.64.0/24 |
+| Install media | `ubuntu-26.04.1-live-server-arm64.iso` |
+| Disk on host | 40 GB virtual, ~4.6 GB actual (sparse image, grows as used) |
 
 ## Guest VM
 | Item | Value |
@@ -14,7 +21,7 @@ Documented from a live inventory of the VM (`scripts/vm-inventory.sh`).
 | Kernel | 7.0.0-34-generic |
 | Hostname | a0 |
 | vCPU | 4 |
-| RAM | ~10 GB allocated (9.2 GiB visible to guest) |
+| RAM | 10 GB allocated (9.2 GiB visible to guest) |
 | Swap | None (disabled, as Kubernetes expects) |
 | Disk | 40 GB virtual disk, LVM |
 | Time zone | UTC, synced by chrony |
