@@ -1,0 +1,5 @@
+---
+- name: Install troubleshooting toolkit
+  ansible.builtin.apt:
+    name: "{{ toolkit_packages }}"
+    state: present

@@ -1,0 +1,7 @@
+---
+- name: Install kubectl (checksum verified)
+  ansible.builtin.get_url:
+    url: "https://dl.k8s.io/release/{{ kubectl_version }}/bin/linux/{{ k8s_arch }}/kubectl"
+    checksum: "sha256:https://dl.k8s.io/release/{{ kubectl_version }}/bin/linux/{{ k8s_arch }}/kubectl.sha256"
+    dest: /usr/local/bin/kubectl
+    mode: "0755"

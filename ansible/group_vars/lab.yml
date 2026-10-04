@@ -1,0 +1,34 @@
+# Versions pinned to what the documented VM runs (docs/environment.md)
+k0s_version: "v1.36.4+k0s.1"
+kubectl_version: "v1.37.1"
+
+# Map Ansible's architecture name to the release asset name
+arch_map:
+  aarch64: arm64
+  x86_64: amd64
+k8s_arch: "{{ arch_map[ansible_architecture] }}"
+
+node_hostname: a0
+k8s_admin_user: "{{ ansible_user }}"
+
+toolkit_packages:
+  - sysstat
+  - htop
+  - iotop
+  - net-tools
+  - iproute2
+  - tcpdump
+  - lsof
+  - ipmitool
+  - stress-ng
+  - jq
+
+# SSH hardening: public key on your Mac that should be authorized on the VM
+ssh_pubkey_file: "~/.ssh/id_ed25519.pub"
+ssh_disable_password_auth: true
+
+# Host firewall is OFF by default. ufw's default policies can block pod and
+# service traffic; enable only after testing (see ansible/README.md).
+firewall_enabled: false
+pod_cidr: 10.244.0.0/16
+service_cidr: 10.96.0.0/12

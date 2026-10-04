@@ -1,0 +1,23 @@
+---
+- name: Build the hardened-k8s lab node
+  hosts: lab
+  roles:
+    - role: base
+      tags: [base]
+    - role: chrony
+      tags: [chrony]
+    - role: k8s_prereqs
+      tags: [prereqs]
+    - role: toolkit
+      tags: [toolkit]
+    - role: k0s
+      tags: [k0s]
+    - role: kubectl
+      tags: [kubectl]
+    - role: ssh_hardening
+      tags: [ssh, hardening]
+    - role: firewall
+      tags: [firewall, hardening]
+      when: firewall_enabled | bool
+    - role: verify
+      tags: [verify]

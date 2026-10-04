@@ -1,0 +1,50 @@
+---
+# Equivalent to: curl -sSf https://get.k0s.sh | sudo sh  (pinned version)
+- name: Download k0s binary
+  ansible.builtin.get_url:
+    url: "https://github.com/k0sproject/k0s/releases/download/{{ k0s_version }}/k0s-{{ k0s_version }}-{{ k8s_arch }}"
+    dest: /usr/local/bin/k0s
+    mode: "0755"
+
+- name: Install k0s as a single-node controller
+  ansible.builtin.command: k0s install controller --single
+  args:
+    creates: /etc/systemd/system/k0scontroller.service
+
+- name: Enable and start k0s
+  ansible.builtin.systemd:
+    name: k0scontroller
+    enabled: true
+    state: started
+    daemon_reload: true
+
+- name: Wait for the Kubernetes API
+  ansible.builtin.command: k0s kubectl get --raw=/readyz
+  register: k0s_api_ready
+  until: k0s_api_ready.rc == 0
+  retries: 30
+  delay: 10
+  changed_when: false
+
+- name: Create ~/.kube for the admin user
+  ansible.builtin.file:
+    path: "/home/{{ k8s_admin_user }}/.kube"
+    state: directory
+    owner: "{{ k8s_admin_user }}"
+    group: "{{ k8s_admin_user }}"
+    mode: "0700"
+
+- name: Generate admin kubeconfig
+  ansible.builtin.command: k0s kubeconfig admin
+  register: k0s_admin_kubeconfig
+  changed_when: false
+  no_log: true
+
+- name: Write admin kubeconfig
+  ansible.builtin.copy:
+    dest: "/home/{{ k8s_admin_user }}/.kube/config"
+    content: "{{ k0s_admin_kubeconfig.stdout }}\n"
+    owner: "{{ k8s_admin_user }}"
+    group: "{{ k8s_admin_user }}"
+    mode: "0600"
+  no_log: true

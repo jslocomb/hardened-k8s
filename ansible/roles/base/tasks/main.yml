@@ -1,0 +1,10 @@
+---
+- name: Set hostname
+  ansible.builtin.hostname:
+    name: "{{ node_hostname }}"
+
+- name: Update apt cache and apply safe upgrades
+  ansible.builtin.apt:
+    update_cache: true
+    cache_valid_time: 3600
+    upgrade: safe

@@ -1,0 +1,31 @@
+---
+- name: Install ufw
+  ansible.builtin.apt:
+    name: ufw
+    state: present
+
+- name: Allow SSH and the Kubernetes API
+  community.general.ufw:
+    rule: allow
+    port: "{{ item }}"
+    proto: tcp
+  loop: ["22", "6443"]
+
+- name: Allow pod and service network traffic
+  community.general.ufw:
+    rule: allow
+    from_ip: "{{ item }}"
+  loop:
+    - "{{ pod_cidr }}"
+    - "{{ service_cidr }}"
+
+- name: Allow routed traffic for pods
+  community.general.ufw:
+    default: allow
+    direction: routed
+
+- name: Default deny incoming and enable
+  community.general.ufw:
+    state: enabled
+    default: deny
+    direction: incoming

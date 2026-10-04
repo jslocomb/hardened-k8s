@@ -1,0 +1,40 @@
+---
+- name: Persist kernel modules for container networking
+  ansible.builtin.copy:
+    dest: /etc/modules-load.d/k8s.conf
+    content: |
+      overlay
+      br_netfilter
+    mode: "0644"
+
+- name: Load kernel modules now
+  community.general.modprobe:
+    name: "{{ item }}"
+    state: present
+  loop: [overlay, br_netfilter]
+
+- name: Set Kubernetes networking sysctls
+  ansible.posix.sysctl:
+    name: "{{ item }}"
+    value: "1"
+    sysctl_file: /etc/sysctl.d/99-k8s.conf
+    reload: true
+  loop:
+    - net.ipv4.ip_forward
+    - net.bridge.bridge-nf-call-iptables
+
+- name: Check for active swap
+  ansible.builtin.command: swapon --show --noheadings
+  register: k8s_prereqs_swap
+  changed_when: false
+
+- name: Disable swap
+  ansible.builtin.command: swapoff -a
+  when: k8s_prereqs_swap.stdout | length > 0
+  changed_when: true
+
+- name: Remove swap entries from fstab
+  ansible.builtin.replace:
+    path: /etc/fstab
+    regexp: '^([^#].*\sswap\s.*)$'
+    replace: '# \1'

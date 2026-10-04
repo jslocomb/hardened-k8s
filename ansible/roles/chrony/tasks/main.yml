@@ -1,0 +1,15 @@
+---
+# Fix for clock drift after host sleep (docs/environment.md, Known quirks)
+- name: Ensure chrony is installed
+  ansible.builtin.apt:
+    name: chrony
+    state: present
+
+- name: Allow chrony to step the clock whenever it is off by more than 1s
+  ansible.builtin.copy:
+    dest: /etc/chrony/conf.d/makestep.conf
+    content: "makestep 1 -1\n"
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart chrony

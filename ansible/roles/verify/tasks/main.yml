@@ -1,0 +1,17 @@
+---
+- name: Wait for the node to be Ready
+  ansible.builtin.command: k0s kubectl wait --for=condition=Ready node --all --timeout=60s
+  register: verify_node_ready
+  until: verify_node_ready.rc == 0
+  retries: 10
+  delay: 15
+  changed_when: false
+
+- name: Show cluster state
+  ansible.builtin.command: k0s kubectl get nodes,pods --all-namespaces -o wide
+  register: verify_cluster_state
+  changed_when: false
+
+- name: Cluster state
+  ansible.builtin.debug:
+    var: verify_cluster_state.stdout_lines

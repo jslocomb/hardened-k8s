@@ -26,6 +26,12 @@ real output from my own environment.
 
 Setup notes: [docs/environment.md](docs/environment.md)
 
+## Automation
+
+The full VM build is codified as an Ansible playbook in [ansible/](ansible/README.md):
+k0s install, kubectl, troubleshooting toolkit, kernel prerequisites, time-sync fix, and
+node hardening. Runs from the Mac over SSH; passes `ansible-lint` (production profile).
+
 ## Troubleshooting scenarios
 
 Each scenario follows the same format: symptom, triage, root cause, fix, lessons learned.

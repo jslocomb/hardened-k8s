@@ -1,0 +1,24 @@
+---
+# Playbook runs over key-based SSH, so a successful connection proves the key
+# works before password auth is turned off.
+- name: Authorize the Mac's public key
+  ansible.posix.authorized_key:
+    user: "{{ ansible_user }}"
+    key: "{{ lookup('file', ssh_pubkey_file) }}"
+    state: present
+
+- name: SSH hardening drop-in
+  ansible.builtin.copy:
+    dest: /etc/ssh/sshd_config.d/10-hardening.conf
+    content: |
+      # Managed by Ansible (hardened-k8s)
+      PermitRootLogin no
+      PubkeyAuthentication yes
+      PasswordAuthentication {{ 'no' if ssh_disable_password_auth | bool else 'yes' }}
+      KbdInteractiveAuthentication no
+    owner: root
+    group: root
+    mode: "0644"
+  notify:
+    - Validate sshd configuration
+    - Restart ssh
