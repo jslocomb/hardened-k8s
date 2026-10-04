@@ -1,0 +1,13 @@
+# Never commit credentials or cluster access
+kubeconfig*
+*.kubeconfig
+*.key
+*.pem
+*.crt
+.env
+secrets/
+*.secret.yaml
+
+# OS / editor
+.DS_Store
+*.swp
