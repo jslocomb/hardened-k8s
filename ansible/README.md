@@ -4,8 +4,8 @@ Recreates the VM build documented in [docs/environment.md](../docs/environment.m
 then applies node hardening. Runs from the Mac over SSH; nothing is installed on the VM
 except what the build itself needs.
 
-**Status:** written from the documented manual build. Not yet validated end to end
-against a fresh VM.
+**Status:** written from the documented manual build. Validated against the existing lab VM: converges cleanly and is idempotent
+(second run: changed=0). Not yet validated against a fresh VM.
 
 ## What it does
 | Role | Purpose |

@@ -106,6 +106,9 @@ Kernel prerequisites present: `overlay` and `br_netfilter` modules loaded,
 - **kubectl needs sudo-free access.** Running `k0s kubectl` requires sudo; the
   standalone kubectl plus an admin kubeconfig in `~/.kube/config` avoids that.
 
+- **sudo-rs breaks Ansible become.** Ubuntu 25.10+ ships sudo-rs as `sudo`; Ansible
+  times out waiting for its password prompt. Fix: `ansible_become_exe: /usr/bin/sudo.ws`
+  (classic sudo, still installed) in `ansible/group_vars/lab.yml`.
+
 ## Hardening gaps (tracked in [security/README.md](../security/README.md))
-- SSH password authentication is still enabled.
 - No host firewall installed.

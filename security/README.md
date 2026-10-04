@@ -5,8 +5,8 @@ Status key: Planned · In progress · Done
 ## Node (Ubuntu VM)
 | Control | Status | Notes |
 |---|---|---|
-| SSH: key-only auth (`PasswordAuthentication no`) | Planned | Currently enabled |
-| SSH: root login | Done | `prohibit-password` (Ubuntu default) |
+| SSH: key-only auth (`PasswordAuthentication no`) | Done | Ansible `ssh_hardening` role |
+| SSH: root login disabled | Done | `PermitRootLogin no` via Ansible |
 | Host firewall (ufw or nftables), allow SSH + 6443 only | Planned | Not installed |
 | Automatic security updates | Done | `unattended-upgrades` enabled |
 | Swap disabled | Done | |
