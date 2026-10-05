@@ -51,3 +51,10 @@ ansible-playbook site.yml -K --tags ssh   # run one area
   but verify with the troubleshooting scenarios before enabling it permanently.
 - `--check` mode will report some tasks (k0s install, kubeconfig) as skipped or
   changed, because they depend on commands that don't run in check mode.
+
+## Setup
+
+Collections install into the project (`./collections`, gitignored) so `ansible-playbook`
+and `ansible-lint` resolve the same versions:
+
+    ansible-galaxy collection install -r requirements.yml -p ./collections

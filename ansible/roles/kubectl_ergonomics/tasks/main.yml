@@ -1,0 +1,24 @@
+---
+# CKA exam habits: alias, completion, dry-run shortcut, YAML-friendly vim
+- name: Ensure bash-completion is installed
+  ansible.builtin.apt:
+    name: bash-completion
+    state: present
+
+- name: Add kubectl aliases and completion to .bashrc
+  ansible.builtin.blockinfile:
+    path: "/home/{{ kubectl_ergonomics_user }}/.bashrc"
+    marker: "# {mark} kubectl quality of life (Ansible managed)"
+    block: |
+      source <(kubectl completion bash)
+      alias k=kubectl
+      complete -o default -F __start_kubectl k
+      export do="--dry-run=client -o yaml"
+  become: false
+
+- name: Set vim defaults for YAML
+  ansible.builtin.copy:
+    dest: "/home/{{ kubectl_ergonomics_user }}/.vimrc"
+    content: "set expandtab tabstop=2 shiftwidth=2 number\n"
+    mode: "0644"
+  become: false

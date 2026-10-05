@@ -14,6 +14,8 @@
       tags: [k0s]
     - role: kubectl
       tags: [kubectl]
+    - role: kubectl_ergonomics
+      tags: [kubectl, ergonomics]
     - role: ssh_hardening
       tags: [ssh, hardening]
     - role: firewall
