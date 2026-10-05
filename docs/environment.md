@@ -34,10 +34,10 @@ Full host inventory (hardware, security posture, toolchain): [host.md](host.md)
 | vda1 | 1 GB | vfat | /boot/efi |
 | vda2 | 2 GB | ext4 | /boot |
 | vda3 | 36.9 GB | LVM PV | |
-| ubuntu-vg/ubuntu-lv | 18.5 GB | ext4 | / |
+| ubuntu-vg/ubuntu-lv | 37 GB | ext4 | / |
 
 Note: the Ubuntu installer allocated only about half the volume group to `/`.
-About 18 GB is unallocated and can be added later:
+The rest was added online with:
 ```bash
 sudo lvextend -r -l +100%FREE /dev/ubuntu-vg/ubuntu-lv
 ```

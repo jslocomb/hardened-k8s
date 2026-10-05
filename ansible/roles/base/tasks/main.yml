@@ -8,3 +8,10 @@
     update_cache: true
     cache_valid_time: 3600
     upgrade: safe
+
+- name: Grow root LV to fill the volume group
+  community.general.lvol:
+    vg: ubuntu-vg
+    lv: ubuntu-lv
+    size: +100%FREE
+    resizefs: true
