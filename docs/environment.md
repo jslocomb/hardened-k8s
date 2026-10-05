@@ -3,6 +3,8 @@
 Documented from a live inventory of the VM (`scripts/vm-inventory.sh`).
 
 ## Host and hypervisor
+Full host inventory (hardware, security posture, toolchain): [host.md](host.md)
+
 | Item | Value |
 |---|---|
 | Host | Mac Mini M4 |

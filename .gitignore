@@ -13,3 +13,4 @@ secrets/
 *.swp
 
 vm-inventory-*.txt
+mac-inventory-*-private.txt
