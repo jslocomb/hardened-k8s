@@ -30,7 +30,7 @@ Source: [Linux Foundation, CKA program changes](https://training.linuxfoundation
 6. **Final prep:** Killercoda CKA scenarios, plus both killer.sh simulators (harder than the real exam).
 
 **Corrections to the video** (checked against the Linux Foundation curriculum page)
-- **etcd backup/restore:** correctly dropped from the curriculum. The course still teaches it, and it's still worth knowing for Mirantis.
+- **etcd backup/restore:** correctly dropped from the curriculum. The course still teaches it, and it's still worth knowing for real-world operations.
 - **HA and upgrades:** *not* dropped. "Highly available control plane" and "cluster lifecycle management" are still listed under Cluster Architecture (25%).
 - **Pod Security Admission:** not named in the CKA curriculum. Closest item is "pod admission and scheduling controls." PSA by name is a CKS topic.
 
