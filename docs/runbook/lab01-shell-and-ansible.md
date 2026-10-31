@@ -78,6 +78,9 @@ ansible/roles/verify/tasks/main.yml
 ansible/site.yml
 ```
 
+On the Mac, `sort` ignores case and treats `_` differently, so `README.md` and the two
+`kubectl` roles can print in a different position. The 19 files are what matters.
+
 The draft's role names map to the repo like this: `prereqs` = `k8s_prereqs`,
 `ssh` = `ssh_hardening`. The repo names stay; nothing is renamed.
 
@@ -101,6 +104,9 @@ k0sctl version && helm version --short && k9s version --short && watch --version
 **Expected:** a version line from each tool, for example:
 
 > `version: v0.33.1` (k0sctl), `v3.x.y+g...` or `v4.x.y+g...` (helm), `Version  v0.x.y` (k9s), `watch from procps-ng 4.x`
+
+Homebrew currently installs Helm 4. The runbook's Helm commands (`repo add`, `install`,
+`uninstall`, OCI installs) behave the same in Helm 4.
 
 **Troubleshooting:** `Error: No available formula with the name "k0sctl"` means the tap
 was not added. Run `brew tap k0sproject/tap` and repeat the install.
@@ -533,16 +539,25 @@ EOF
 ### Step 10: Syntax check and lint
 
 ```bash
-cd ~/Projects/hardened-k8s/ansible && ansible-playbook os.yml --syntax-check && ansible-playbook site.yml --syntax-check && ansible-lint
+ulimit -n 4096 && cd ~/Projects/hardened-k8s/ansible && ansible-playbook os.yml --syntax-check && ansible-playbook site.yml --syntax-check && ansible-lint --exclude collections
 ```
 
 **Expected:**
 
 > `playbook: os.yml`
 > `playbook: site.yml`
-> `Passed: 0 failure(s), 0 warning(s) ...` with `profile 'production'`
+> `Passed: 0 failure(s), 0 warning(s) in 33 files processed of 35 encountered. Last profile that met the validation criteria was 'production'.`
+
+**Mac gotcha:** macOS limits each terminal to 256 open files (`ulimit -n` prints `256`),
+and ansible-lint opens more than that. `ulimit -n 4096` raises the limit for this
+terminal only. `--exclude collections` skips the third-party collections downloaded into
+`./collections`; only your own roles and playbooks need linting.
 
 **Troubleshooting:**
+- `OSError: [Errno 24] Too many open files`: the `ulimit -n 4096` part was skipped or
+  ran in a different terminal. Run the whole command again in one line.
+- `AnsibleWarning: Found duplicate mapping key` or a Python `ResourceWarning`: noise from
+  files in `./collections` or from Python itself. Ignore them if the last line says `Passed`.
 - `couldn't resolve module/action 'community.general.lvol'`: the collections are missing
   from `./collections`. Run `ansible-galaxy collection install -r requirements.yml -p ./collections`.
 
@@ -574,6 +589,23 @@ This can take ~60–90 s because of the apt upgrade.
 The two skipped tasks are the passwordless-sudo drop-in (off for `a0`) and `Disable swap`
 (swap is already off).
 
+**Check the nftables service stays off.** `conntrack` and `ipset` pull in the `iptables`
+and `nftables` packages. k0s uses its own bundled iptables, so that is harmless, but an
+enabled `nftables` service would load `/etc/nftables.conf` at boot, which begins with
+`flush ruleset` and would wipe the rules Kubernetes depends on.
+
+```bash
+ssh jason@192.168.64.4 'systemctl is-enabled nftables; systemctl is-active nftables'
+```
+
+**Expected:**
+
+> `disabled`
+> `inactive`
+
+If either says `enabled` or `active`, run
+`ssh -t jason@192.168.64.4 'sudo systemctl disable --now nftables'` before continuing.
+
 **Verify idempotence (second run must report `changed=0`):**
 
 ```bash
@@ -584,10 +616,14 @@ cd ~/Projects/hardened-k8s/ansible && ansible-playbook site.yml -K --tags base,c
 
 > `a0 : ok=NN changed=0 unreachable=0 failed=0 skipped=2 ...`
 
+If you see `ok=0 ... failed=1`, the run failed at its first task (Gathering Facts), which
+almost always means a mistyped `BECOME password`; `| tail -3` hides the error message.
+Run it again. Use `| tail -15` instead to see the message.
+
 **Verify on the node:**
 
 ```bash
-ssh jason@192.168.64.4 'sysctl fs.inotify.max_user_watches net.bridge.bridge-nf-call-ip6tables; crictl --version; sudo crictl ps --name coredns -q | wc -l'
+ssh jason@192.168.64.4 'sysctl fs.inotify.max_user_watches net.bridge.bridge-nf-call-ip6tables; crictl --version'
 ```
 
 **Expected:**
@@ -595,23 +631,39 @@ ssh jason@192.168.64.4 'sysctl fs.inotify.max_user_watches net.bridge.bridge-nf-
 > `fs.inotify.max_user_watches = 524288`
 > `net.bridge.bridge-nf-call-ip6tables = 1`
 > `crictl version v1.36.0`
+
+`crictl ps` needs root. `a0` has no passwordless sudo, so `sudo` must prompt, and that
+needs a terminal: add `-t` to `ssh`.
+
+```bash
+ssh -t jason@192.168.64.4 'sudo crictl ps --name coredns -q | wc -l'
+```
+
+**Expected:**
+
+> `[sudo: authenticate] Password:` (type it)
 > `1` (the running CoreDNS container, found through the k0s socket)
+> `Connection to 192.168.64.4 closed.`
+
+Without `-t`, sudo prints `sudo: A terminal is required to authenticate` and the count
+is `0`. That is an SSH detail, not a crictl problem. The `[sudo: authenticate]` prompt
+style comes from sudo-rs, Ubuntu 26.04's default `sudo`.
 
 **Troubleshooting:**
 - `crictl ps` returns `connect: no such file or directory`: check the socket with
-  `ssh jason@192.168.64.4 'sudo ls -l /run/k0s/containerd.sock'`. If it is missing,
-  k0s is not running: `ssh jason@192.168.64.4 'sudo k0s status; sudo journalctl -u k0scontroller -n 30'`.
+  `ssh -t jason@192.168.64.4 'sudo ls -l /run/k0s/containerd.sock'`. If it is missing,
+  k0s is not running: `ssh -t jason@192.168.64.4 'sudo k0s status; sudo journalctl -u k0scontroller -n 30'`.
 - Ansible hangs at `BECOME password:` or times out: confirm `ansible_become_exe` landed in
   `all.yml` with `ansible-inventory --host a0 | jq .ansible_become_exe`. Expected `"/usr/bin/sudo.ws"`.
 - `apt` fails on repository signature validity: the VM clock drifted after the Mac slept.
-  `ssh jason@192.168.64.4 'sudo chronyc makestep'` and re-run.
+  `ssh -t jason@192.168.64.4 'sudo chronyc makestep'` and re-run.
 
 ---
 
 ### Step 12: Update the Ansible README role table and commit
 
 ```bash
-cd ~/Projects/hardened-k8s && cat > /tmp/os-yml-readme.md << 'EOF'
+cd ~/Projects/hardened-k8s && cat >> ansible/README.md << 'EOF'
 
 ## Multi-node cluster (Labs 2+)
 `os.yml` applies the OS roles (`base`, `chrony`, `k8s_prereqs`, `toolkit`,
@@ -622,8 +674,11 @@ role is the single-node path for `a0` only.
     cd ansible
     ansible-playbook os.yml -K        # first run, before passwordless sudo exists
     ansible-playbook os.yml           # later runs
+
+Lint on macOS needs a higher open-file limit and should skip downloaded collections:
+
+    ulimit -n 4096 && ansible-lint --exclude collections
 EOF
-cat /tmp/os-yml-readme.md >> ansible/README.md && rm /tmp/os-yml-readme.md
 git add ansible && git status --short
 ```
 
@@ -645,8 +700,10 @@ M  ansible/roles/toolkit/tasks/main.yml
 ```
 
 ```bash
-cd ~/Projects/hardened-k8s && git commit -m "ansible: shared group_vars, multinode inventory, os.yml, crictl, opt-in passwordless sudo"
+cd ~/Projects/hardened-k8s && git commit -m "ansible: shared group_vars, multinode inventory, os.yml, crictl, opt-in passwordless sudo" && git push
 ```
+
+**Expected:** `12 files changed`, then `main -> main` from the push.
 
 ---
 
@@ -667,7 +724,7 @@ cd ~/Projects/hardened-k8s && git revert --no-edit HEAD
 **On `a0`:** reverting the repo does not undo what was applied. Remove the additions:
 
 ```bash
-ssh jason@192.168.64.4 'sudo rm -f /usr/local/bin/crictl /etc/crictl.yaml /var/tmp/crictl-v1.36.0.tar.gz && sudo sed -i "/bridge-nf-call-ip6tables/d;/fs.inotify/d" /etc/sysctl.d/99-k8s.conf && sudo sysctl --system >/dev/null && echo cleaned'
+ssh -t jason@192.168.64.4 'sudo rm -f /usr/local/bin/crictl /etc/crictl.yaml /var/tmp/crictl-v1.36.0.tar.gz && sudo sed -i "/bridge-nf-call-ip6tables/d;/fs.inotify/d" /etc/sysctl.d/99-k8s.conf && sudo sysctl --system >/dev/null && echo cleaned'
 ```
 
 **Expected:** `cleaned`. The extra apt packages are harmless and can stay; remove them
