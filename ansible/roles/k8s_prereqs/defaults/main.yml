@@ -1,0 +1,8 @@
+---
+k8s_prereqs_sysctls:
+  net.ipv4.ip_forward: "1"
+  net.bridge.bridge-nf-call-iptables: "1"
+  net.bridge.bridge-nf-call-ip6tables: "1"
+  # Many pods plus `kubectl logs -f` exhaust the default inotify limits
+  fs.inotify.max_user_watches: "524288"
+  fs.inotify.max_user_instances: "512"

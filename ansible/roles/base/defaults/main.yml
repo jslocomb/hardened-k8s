@@ -1,0 +1,3 @@
+---
+# k0sctl requires root or passwordless sudo. Off unless a group turns it on.
+base_passwordless_sudo: false

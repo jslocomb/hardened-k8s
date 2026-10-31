@@ -1,0 +1,4 @@
+---
+toolkit_crictl_version: "v1.36.0"
+toolkit_crictl_base_url: "https://github.com/kubernetes-sigs/cri-tools/releases/download"
+toolkit_crictl_tarball: "crictl-{{ toolkit_crictl_version }}-linux-{{ k8s_arch }}.tar.gz"

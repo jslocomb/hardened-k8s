@@ -1,0 +1,11 @@
+---
+# controller + worker-01 + worker-02. k0s itself is installed by k0sctl
+# (k0sctl/k0sctl.yaml, etcd datastore), not by the k0s role.
+node_hostname: "{{ inventory_hostname }}"
+
+# kubectl on the controller. v1.36 stays within the +/-1 minor skew of both the
+# v1.35 install (Lab 2) and the v1.36 upgrade (Lab 3).
+kubectl_version: "v1.36.4"
+
+# k0sctl needs root or passwordless sudo over SSH. Root login stays disabled.
+base_passwordless_sudo: true

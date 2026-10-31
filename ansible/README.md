@@ -58,3 +58,17 @@ Collections install into the project (`./collections`, gitignored) so `ansible-p
 and `ansible-lint` resolve the same versions:
 
     ansible-galaxy collection install -r requirements.yml -p ./collections
+
+## Multi-node cluster (Labs 2+)
+`os.yml` applies the OS roles (`base`, `chrony`, `k8s_prereqs`, `toolkit`,
+`ssh_hardening`) to the `multinode` group, and `kubectl` + `kubectl_ergonomics` to the
+controller. k0s is installed afterwards by k0sctl from `k0sctl/k0sctl.yaml`; the `k0s`
+role is the single-node path for `a0` only.
+
+    cd ansible
+    ansible-playbook os.yml -K        # first run, before passwordless sudo exists
+    ansible-playbook os.yml           # later runs
+
+Lint on macOS needs a higher open-file limit and should skip downloaded collections:
+
+    ulimit -n 4096 && ansible-lint --exclude collections

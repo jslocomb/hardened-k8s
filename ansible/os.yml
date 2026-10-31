@@ -1,0 +1,24 @@
+---
+# OS baseline for the multi-node cluster. k0s is installed afterwards by
+# k0sctl (k0sctl/k0sctl.yaml), so the k0s and verify roles are not used here.
+- name: OS baseline for controller and workers
+  hosts: multinode
+  roles:
+    - role: base
+      tags: [base]
+    - role: chrony
+      tags: [chrony]
+    - role: k8s_prereqs
+      tags: [prereqs]
+    - role: toolkit
+      tags: [toolkit]
+    - role: ssh_hardening
+      tags: [ssh, hardening]
+
+- name: Kubectl and shell ergonomics on the controller
+  hosts: controllers
+  roles:
+    - role: kubectl
+      tags: [kubectl]
+    - role: kubectl_ergonomics
+      tags: [kubectl, ergonomics]

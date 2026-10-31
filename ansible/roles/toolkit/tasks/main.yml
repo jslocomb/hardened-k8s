@@ -3,3 +3,33 @@
   ansible.builtin.apt:
     name: "{{ toolkit_packages }}"
     state: present
+
+- name: Download crictl (checksum verified)
+  ansible.builtin.get_url:
+    url: "{{ toolkit_crictl_base_url }}/{{ toolkit_crictl_version }}/{{ toolkit_crictl_tarball }}"
+    checksum: "sha256:{{ toolkit_crictl_base_url }}/{{ toolkit_crictl_version }}/{{ toolkit_crictl_tarball }}.sha256"
+    dest: "/var/tmp/crictl-{{ toolkit_crictl_version }}.tar.gz"
+    mode: "0644"
+
+- name: Install crictl
+  ansible.builtin.unarchive:
+    src: "/var/tmp/crictl-{{ toolkit_crictl_version }}.tar.gz"
+    dest: /usr/local/bin
+    remote_src: true
+    include: [crictl]
+    owner: root
+    group: root
+    mode: "0755"
+  # In --check mode get_url does not download, so there is nothing to unpack yet
+  when: not ansible_check_mode
+
+- name: Point crictl at the k0s containerd socket
+  ansible.builtin.copy:
+    dest: /etc/crictl.yaml
+    content: |
+      runtime-endpoint: unix:///run/k0s/containerd.sock
+      image-endpoint: unix:///run/k0s/containerd.sock
+      timeout: 10
+    owner: root
+    group: root
+    mode: "0644"

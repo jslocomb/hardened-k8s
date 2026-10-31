@@ -1,4 +1,5 @@
 ---
+# No container runtime is installed here: k0s bundles and manages containerd.
 - name: Persist kernel modules for container networking
   ansible.builtin.copy:
     dest: /etc/modules-load.d/k8s.conf
@@ -13,15 +14,13 @@
     state: present
   loop: [overlay, br_netfilter]
 
-- name: Set Kubernetes networking sysctls
+- name: Set Kubernetes networking and kernel sysctls
   ansible.posix.sysctl:
-    name: "{{ item }}"
-    value: "1"
+    name: "{{ item.key }}"
+    value: "{{ item.value }}"
     sysctl_file: /etc/sysctl.d/99-k8s.conf
     reload: true
-  loop:
-    - net.ipv4.ip_forward
-    - net.bridge.bridge-nf-call-iptables
+  loop: "{{ k8s_prereqs_sysctls | dict2items }}"
 
 - name: Check for active swap
   ansible.builtin.command: swapon --show --noheadings

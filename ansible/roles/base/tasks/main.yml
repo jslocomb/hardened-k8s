@@ -15,3 +15,13 @@
     lv: ubuntu-lv
     size: +100%FREE
     resizefs: true
+
+- name: Passwordless sudo for the admin user (k0sctl requirement)
+  ansible.builtin.copy:
+    dest: /etc/sudoers.d/90-k0sctl
+    content: "{{ ansible_user }} ALL=(ALL) NOPASSWD:ALL\n"
+    owner: root
+    group: root
+    mode: "0440"
+    validate: visudo -cf %s
+  when: base_passwordless_sudo | bool
