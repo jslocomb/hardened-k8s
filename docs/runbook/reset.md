@@ -7,8 +7,8 @@ Mac.
 1. Any k0rdent child clusters (so GCP resources are deleted by k0rdent while the
    management cluster still exists).
 2. The GPU Operator and k0rdent Helm releases.
-3. The `controller`, `worker-01`, and `worker-02` UTM VMs. `a0` (named `Linux` in UTM) is
-   **never** touched.
+3. The `controller`, `worker-01`, and `worker-02` UTM VMs. `a0` is **never**
+   touched.
 4. The lab kubeconfigs, the `~/.ssh/config` block, and the three VMs' SSH host keys.
 5. GCP: service-account keys, then (if you confirm) the whole lab project.
 6. `~/Projects/hardened-k8s` (only if you type its name, and only when it has no
@@ -33,7 +33,7 @@ VMS=(controller worker-01 worker-02)
 say() { printf '\n==> %s\n' "$*"; }
 
 say "This destroys the multi-node lab VMs (${VMS[*]}), lab Helm releases, child clusters, and lab kubeconfigs."
-echo "    a0 ('Linux' in UTM) is not touched."
+echo "    a0 is not touched."
 read -r -p "Type RESET to continue: " answer
 [ "$answer" = "RESET" ] || { echo "Aborted."; exit 1; }
 
@@ -141,7 +141,7 @@ utmctl list; ls ~/.kube/; grep -c 'hardened-k8s multi-node lab' ~/.ssh/config ||
 ```
 
 **Expected:** `controller`, `worker-01`, and `worker-02` absent from the UTM list
-(`Linux` still present), no `hardened-k8s.kubeconfig`, and `0`.
+(`a0` still present), no `hardened-k8s.kubeconfig`, and `0`.
 
 ## Notes
 

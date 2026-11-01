@@ -64,7 +64,24 @@ cd ~/Projects/hardened-k8s/ansible && ansible-playbook os.yml --syntax-check && 
 
 ---
 
-### Step 1: Download and verify the ISO
+### Step 1: Get and verify the ISO
+
+If you built `a0`, you probably have the ISO already. Check first:
+
+```bash
+find ~/Downloads ~/Desktop ~/Documents -maxdepth 3 -name 'ubuntu-26.04*arm64*.iso' 2>/dev/null
+```
+
+**A path is printed:** verify that copy instead of downloading again (run from the folder
+that holds it):
+
+```bash
+cd ~/Downloads && curl -fsSLO https://cdimage.ubuntu.com/releases/26.04.1/release/SHA256SUMS && grep 'ubuntu-26.04.1-live-server-arm64.iso$' SHA256SUMS | shasum -a 256 -c -
+```
+
+**Expected:** `ubuntu-26.04.1-live-server-arm64.iso: OK`. Use that path in Step 3.
+
+**Nothing is printed:** download and verify:
 
 ```bash
 mkdir -p ~/Downloads/iso && cd ~/Downloads/iso && curl -fLO https://cdimage.ubuntu.com/releases/26.04.1/release/ubuntu-26.04.1-live-server-arm64.iso && curl -fLO https://cdimage.ubuntu.com/releases/26.04.1/release/SHA256SUMS && shasum -a 256 -c SHA256SUMS --ignore-missing
@@ -76,8 +93,7 @@ About 2.9 GB; this can take a few minutes.
 
 > `ubuntu-26.04.1-live-server-arm64.iso: OK`
 
-If you already have this ISO from building `a0`, point UTM at that copy and skip the
-download. Use the plain `arm64` image, not `arm64+largemem` (that one is for 64K page
+Use the plain `arm64` image, not `arm64+largemem` (that one is for 64K page
 kernels on large servers).
 
 ---
@@ -85,11 +101,12 @@ kernels on large servers).
 ### Step 2: Stop `a0`
 
 ```bash
-utmctl list && utmctl stop Linux && sleep 10 && utmctl status Linux
+utmctl list && utmctl stop a0 && sleep 10 && utmctl status a0
 ```
 
-`Linux` is `a0`'s name in UTM (`docs/host.md`). Use the name from `utmctl list` if yours
-differs.
+Lab 1 renamed the VM from `Linux` to `a0` in UTM. Use the name from `utmctl list` if
+yours differs. Stopping `a0` keeps its k0s cluster and data on disk; `utmctl start a0`
+brings it back.
 
 **Expected:** `stopped`
 
@@ -107,7 +124,7 @@ GUI task. Labels can shift slightly between UTM releases; the flow is the same.
 5. Leave **Use Apple Virtualization** unchecked. This keeps the QEMU backend, the same as
    `a0`, which Lab 6 relies on for a hard power-off.
 6. Under **Boot ISO Image**, click **Browse…** and select
-   `~/Downloads/iso/ubuntu-26.04.1-live-server-arm64.iso`. Click **Continue**.
+   `~/Downloads/iso/ubuntu-26.04.1-live-server-arm64.iso` (or the existing copy you verified in Step 1). Click **Continue**.
 7. **Memory:** `4096` MiB. **CPU Cores:** `2`. Click **Continue**.
 8. **Storage:** `30` GiB. Click **Continue**.
 9. **Shared Directory:** leave empty. Click **Continue**.
@@ -272,14 +289,32 @@ UTM keeps each VM as a `.utm` bundle. With the VMs stopped, an APFS clone (`cp -
 copies them instantly and uses no extra space until the originals change. This is your
 re-entry point for every later lab.
 
+Shut the VMs down from inside Ubuntu so every write reaches disk before the copy.
+Passwordless sudo does not exist yet (Step 8 adds it), so `sudo` must prompt, which
+needs `ssh -t`:
+
 ```bash
-for v in controller worker-01 worker-02; do utmctl stop "$v"; done; sleep 15; for v in controller worker-01 worker-02; do utmctl status "$v"; done
+for h in controller worker-01 worker-02; do ssh -t "$h" 'sudo poweroff'; done
+```
+
+**Expected:** a `[sudo: authenticate] Password:` prompt per VM, then
+`Connection to 192.168.64.1x closed.`
+
+```bash
+sleep 15; for v in controller worker-01 worker-02; do echo "$v: $(utmctl status $v)"; done
 ```
 
 **Expected:** `stopped` three times.
 
 ```bash
-UTM_DOCS=~/Library/Containers/com.utmapp.UTM/Data/Documents && mkdir -p ~/utm-golden/os-clean && for v in controller worker-01 worker-02; do cp -c -R "$UTM_DOCS/$v.utm" ~/utm-golden/os-clean/; done && ls ~/utm-golden/os-clean
+command ls ~/Library/Containers/com.utmapp.UTM/Data/Documents/
+```
+
+**Expected:** `a0.utm`, `controller.utm`, `worker-01.utm`, `worker-02.utm` (and `Public`).
+`command ls` bypasses an `ls` alias such as `eza`.
+
+```bash
+UTM_DOCS=~/Library/Containers/com.utmapp.UTM/Data/Documents && mkdir -p ~/utm-golden/os-clean && for v in controller worker-01 worker-02; do cp -c -R "$UTM_DOCS/$v.utm" ~/utm-golden/os-clean/ && echo "copied $v"; done && command ls ~/utm-golden/os-clean
 ```
 
 **Expected:** `controller.utm  worker-01.utm  worker-02.utm`
@@ -399,6 +434,19 @@ Notes on the file:
   That difference matters for Lab 3 backups.
 - No secrets are in this file (`keyPath` is a path), so it is safe to commit.
 
+**Preview the plan without changing anything:**
+
+```bash
+cd ~/Projects/hardened-k8s/k0sctl && k0sctl apply --config k0sctl.yaml --dry-run
+```
+
+**Expected (~10–60 s):** `connected`, `is running Ubuntu`, `detected arm64 architecture`,
+and `validating clock skew` for each host, then a `dry-run:` list: install k0s
+`v1.35.8+k0s.1` on `192.168.64.10`, write `/etc/k0s/k0s.yaml` (note k0sctl adds the
+controller IP to `api.sans`), generate two join tokens, and install k0s worker on `.11` and
+`.12`. No `ERROR` lines. The dry run also downloads the k0s binaries to each host, which
+makes Step 10 faster.
+
 ---
 
 ### Step 10: Install k0s with `k0sctl apply`
@@ -407,7 +455,8 @@ Notes on the file:
 cd ~/Projects/hardened-k8s/k0sctl && k0sctl apply --config k0sctl.yaml
 ```
 
-This can take ~3–5 min, don't panic. k0sctl downloads the ~240 MB k0s binary on each
+This can take ~1–5 min, don't panic (about 46 s when the dry run already staged the
+binaries). k0sctl downloads the ~240 MB k0s binary on each
 host, installs the controller, waits for it, then joins the workers. Watch progress from
 a second terminal:
 
@@ -417,7 +466,7 @@ ssh controller 'sudo journalctl -u k0scontroller -f'
 
 **Expected:** the run ends with lines similar to:
 
-> `==> Finished in 3m12s`
+> `==> Finished in 46s` (anywhere from under a minute to several minutes)
 > `k0s cluster version v1.35.8+k0s.1 is now installed`
 
 **Troubleshooting:**
@@ -440,8 +489,12 @@ repo's `.gitignore` already blocks `*.kubeconfig`, but the file lives outside th
 regardless.
 
 ```bash
-cd ~/Projects/hardened-k8s/k0sctl && k0sctl kubeconfig --config k0sctl.yaml > ~/.kube/hardened-k8s.kubeconfig && chmod 600 ~/.kube/hardened-k8s.kubeconfig && export KUBECONFIG=~/.kube/hardened-k8s.kubeconfig
+mkdir -p ~/.kube && chmod 700 ~/.kube && cd ~/Projects/hardened-k8s/k0sctl && k0sctl kubeconfig --config k0sctl.yaml > ~/.kube/hardened-k8s.kubeconfig && chmod 600 ~/.kube/hardened-k8s.kubeconfig && export KUBECONFIG=~/.kube/hardened-k8s.kubeconfig && command ls -l ~/.kube/hardened-k8s.kubeconfig
 ```
+
+**Expected:** one line starting `-rw-------`. `mkdir -p ~/.kube` matters on a Mac that
+has never run kubectl against a cluster: without the folder, the redirect fails with
+`No such file or directory`.
 
 Every new terminal for Labs 2–8 needs:
 
@@ -458,14 +511,19 @@ k version && k get nodes -o wide
 **Expected:**
 
 ```text
-Client Version: v1.37.1
+Client Version: v1.37.x
 Kustomize Version: v5.x.y
 Server Version: v1.35.8+k0s
-WARNING: version difference between client (1.37) and server (1.35) exceeds the supported minor version skew of +/-1
+Warning: version difference between client (1.37) and server (1.35) exceeds the supported minor version skew of +/-1
 NAME        STATUS   ROLES    AGE   VERSION        INTERNAL-IP     ...   OS-IMAGE                       KERNEL-VERSION     CONTAINER-RUNTIME
 worker-01   Ready    <none>   2m    v1.35.8+k0s    192.168.64.11   ...   Ubuntu 26.04.1 LTS             7.0.0-xx-generic   containerd://2.x.y
 worker-02   Ready    <none>   2m    v1.35.8+k0s    192.168.64.12   ...   Ubuntu 26.04.1 LTS             7.0.0-xx-generic   containerd://2.x.y
 ```
+
+**containerd version:** k0s v1.35 bundles **containerd 1.7.x**
+(`CONTAINER-RUNTIME containerd://1.7.35` in the live run). k0s v1.36 bundles containerd
+2.x, so the Lab 3 upgrade also moves the runtime up a major version. Record the
+before/after values in Lab 3.
 
 **Two nodes, not three, is correct.** A k0s `controller` without the worker role runs no
 kubelet, so it never registers as a Node. This is the biggest visible difference from
@@ -572,28 +630,40 @@ cat > ~/Projects/hardened-k8s/k0sctl/README.md << 'EOF'
 OS baseline first (`ansible/os.yml`), then from this directory on the Mac:
 
     k0sctl apply --config k0sctl.yaml
-    k0sctl kubeconfig --config k0sctl.yaml > ~/.kube/hardened-k8s.kubeconfig
+    mkdir -p ~/.kube && k0sctl kubeconfig --config k0sctl.yaml > ~/.kube/hardened-k8s.kubeconfig
 
 Upgrades: change `spec.k0s.version` and re-run `k0sctl apply` (one minor at a time).
 Full procedure: docs/runbook/lab02-k0s-multinode.md and lab03-upgrade-backup-restore.md.
 EOF
-cd ~/Projects/hardened-k8s && git add k0sctl && git commit -m "k0sctl: 1 controller + 2 worker cluster, k0s v1.35.8+k0s.1"
+cd ~/Projects/hardened-k8s && git add k0sctl && git status --short && git commit -m "k0sctl: 1 controller + 2 worker cluster, k0s v1.35.8+k0s.1" && git push
 ```
+
+**Expected:** `A  k0sctl/README.md`, `A  k0sctl/k0sctl.yaml`, then the commit and
+`main -> main`.
+
+Shut down cleanly. Passwordless sudo exists now, so no `-t` or password is needed:
 
 ```bash
-for v in controller worker-01 worker-02; do utmctl stop "$v"; done; sleep 15; UTM_DOCS=~/Library/Containers/com.utmapp.UTM/Data/Documents && mkdir -p ~/utm-golden/k0s-1.35 && for v in controller worker-01 worker-02; do cp -c -R "$UTM_DOCS/$v.utm" ~/utm-golden/k0s-1.35/; done && for v in controller worker-01 worker-02; do utmctl start "$v"; done
+for h in worker-01 worker-02 controller; do ssh "$h" 'sudo poweroff'; done; sleep 20; for v in controller worker-01 worker-02; do echo "$v: $(utmctl status $v)"; done
 ```
 
-Start the controller first if you start them by hand: workers retry until the API is
-back, but the controller-first order gets you to `Ready` faster.
+**Expected:** `stopped` three times.
+
+```bash
+UTM_DOCS=~/Library/Containers/com.utmapp.UTM/Data/Documents && mkdir -p ~/utm-golden/k0s-1.35 && for v in controller worker-01 worker-02; do cp -c -R "$UTM_DOCS/$v.utm" ~/utm-golden/k0s-1.35/ && echo "copied $v"; done && utmctl start controller && sleep 20 && utmctl start worker-01 && utmctl start worker-02
+```
+
+The controller starts first: workers retry until the API is back, but controller-first
+gets you to `Ready` faster.
 
 **Verify (after ~60 s):**
 
 ```bash
-export KUBECONFIG=~/.kube/hardened-k8s.kubeconfig && k get nodes
+export KUBECONFIG=~/.kube/hardened-k8s.kubeconfig && k get nodes && k get pods -A --no-headers | grep -v Running || echo "all pods Running"
 ```
 
-**Expected:** `worker-01` and `worker-02` `Ready`.
+**Expected:** `worker-01` and `worker-02` `Ready`, then `all pods Running`. If a node is
+still `NotReady`, wait 30 s and run it again.
 
 ---
 

@@ -165,7 +165,9 @@ type k && echo "$do" && complete -p k && utmctl list
 > ``k is aliased to `kubectl'``
 > `--dry-run=client -o yaml`
 > `complete -o default -F __start_kubectl k`
-> a table of UTM VMs that includes your existing `a0` VM (named `Linux` in UTM per `docs/host.md`)
+> a table of UTM VMs that includes your existing `a0` VM. If it is still named `Linux` in UTM
+> (the original name in `docs/host.md`), rename it to `a0` in UTM (right-click → **Edit** →
+> **Name**) so the UTM name matches the Ansible inventory; later labs use `a0`.
 
 Then type `k get po` and press **Tab** twice. It should offer `pod`, `pods`, and
 similar completions.

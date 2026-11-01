@@ -48,7 +48,7 @@ it fails, use the fallback at the end of this lab.
 ## Pre-check
 
 ```bash
-export KUBECONFIG=~/.kube/hardened-k8s.kubeconfig && k get nodes && k version | grep Server && utmctl status Linux
+export KUBECONFIG=~/.kube/hardened-k8s.kubeconfig && k get nodes && k version | grep Server && utmctl status a0
 ```
 
 **Expected:** `worker-01` and `worker-02` `Ready`, `Server Version: v1.36.4+k0s`, and
