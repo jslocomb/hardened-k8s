@@ -1,0 +1,36 @@
+apiVersion: k0sctl.k0sproject.io/v1beta1
+kind: Cluster
+metadata:
+  name: hardened-k8s
+spec:
+  hosts:
+    - role: controller
+      ssh:
+        address: 192.168.64.10
+        user: jason
+        port: 22
+        keyPath: ~/.ssh/id_ed25519
+    - role: worker
+      ssh:
+        address: 192.168.64.11
+        user: jason
+        port: 22
+        keyPath: ~/.ssh/id_ed25519
+    - role: worker
+      ssh:
+        address: 192.168.64.12
+        user: jason
+        port: 22
+        keyPath: ~/.ssh/id_ed25519
+  k0s:
+    version: v1.35.8+k0s.1
+    config:
+      apiVersion: k0s.k0sproject.io/v1beta1
+      kind: ClusterConfig
+      metadata:
+        name: hardened-k8s
+      spec:
+        network:
+          provider: kuberouter
+          podCIDR: 10.244.0.0/16
+          serviceCIDR: 10.96.0.0/12
