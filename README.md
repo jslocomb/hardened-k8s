@@ -32,6 +32,14 @@ The full VM build is codified as an Ansible playbook in [ansible/](ansible/READM
 k0s install, kubectl, troubleshooting toolkit, kernel prerequisites, time-sync fix, and
 node hardening. Runs from the Mac over SSH; passes `ansible-lint` (production profile).
 
+## Incident reports
+
+Each incident ships as a postmortem plus a runbook a teammate can follow.
+
+| # | Incident | CKA domain | Pair |
+|---|---|---|---|
+| 03 | etcd backup and restore after a destructive change (DR drill), plus a 1.35 to 1.36 upgrade | Cluster Architecture | [postmortem](incidents/03-etcd-backup-restore/postmortem.md) / [runbook](incidents/03-etcd-backup-restore/runbook.md) |
+
 ## Troubleshooting scenarios
 
 Each scenario follows the same format: symptom, triage, root cause, fix, lessons learned.
