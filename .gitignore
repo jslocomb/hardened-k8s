@@ -15,3 +15,8 @@ secrets/
 vm-inventory-*.txt
 mac-inventory-*-private.txt
 collections/
+
+# k0s backups contain CA private keys and every Secret (etcd snapshot)
+k0sctl/backups/
+k0s_backup_*.tar.gz
+k0s_backup_*.tar.gz.gpg
